@@ -78,10 +78,9 @@ def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = Fal
         data = stream.read(CHUNKSIZE, exception_on_overflow = False)
         frames.append(np.frombuffer(data, dtype=np.int16))
         
-        if _ % fft_chunk_size == 0:
-            amplitude_frame = np.hstack(frames)[-int(rate/ FFT_RESOLUTION):]
-            fft_out = np.fft.fft(amplitude_frame)
-            major_peak = np.argmax(fft_out)*FFT_RESOLUTION
+        amplitude_frame = np.hstack(frames)[-int(rate/ FFT_RESOLUTION):]
+        fft_out = np.fft.fft(amplitude_frame)
+        major_peak = abs(np.fft.fftfreq(int(rate/ FFT_RESOLUTION), d=1/rate)[np.argmax(abs(fft_out))])
 
         if plot:
             y = np.hstack(frames)
