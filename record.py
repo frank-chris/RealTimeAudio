@@ -31,7 +31,7 @@ from low_pass import butter_lowpass_filter
 
 CHUNKSIZE = 128
 CHANNELS = 1
-CUTOFF = 3
+CUTOFF = 0.5
 ORDER = 5
 FFT_RESOLUTION = 1/6
 
