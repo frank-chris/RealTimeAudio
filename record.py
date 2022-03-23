@@ -33,7 +33,7 @@ CHUNKSIZE = 128
 CHANNELS = 1
 CUTOFF = 0.5
 ORDER = 5
-FFT_RESOLUTION = 1/6
+FFT_RESOLUTION = 1/8
 
 def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = False):
     """
