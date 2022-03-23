@@ -78,9 +78,8 @@ def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = Fal
         data = stream.read(CHUNKSIZE, exception_on_overflow = False)
         frames.append(np.frombuffer(data, dtype=np.int16))
         
-        amplitude_frame = np.hstack(frames)[-int(rate/ FFT_RESOLUTION):]
-        fft_out = np.fft.fft(amplitude_frame)
-        major_peak = abs(np.fft.fftfreq(int(rate/ FFT_RESOLUTION), d=1/rate)[np.argmax(abs(fft_out))])
+        # amplitude_frame = butter_lowpass_filter(data=np.hstack(frames), cutoff=CUTOFF, fs=rate, order=ORDER)[-int(rate/ FFT_RESOLUTION):]
+        
 
         if plot:
             y = np.hstack(frames)
@@ -88,6 +87,9 @@ def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = Fal
             line.set_data(x, y)
             y_low_pass = butter_lowpass_filter(data=y, cutoff=CUTOFF, fs=rate, order=ORDER)
             line_2.set_data(x, y_low_pass)
+            amplitude_frame = y_low_pass[-int(rate/ FFT_RESOLUTION):]
+            fft_out = np.fft.fft(amplitude_frame)
+            major_peak = abs(np.fft.fftfreq(int(rate/ FFT_RESOLUTION), d=1/rate)[np.argmax(abs(fft_out))])
             text.set_text("Major peak: " + str(major_peak) + " Hz")
             
             fig.canvas.restore_region(background)
