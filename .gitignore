@@ -1,6 +1,12 @@
 # wav files
 *.wav
 
+# rr.csv
+rr.csv
+
+# gt.txt
+gt.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

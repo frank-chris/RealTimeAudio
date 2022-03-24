@@ -34,7 +34,7 @@ pip install numpy
 ## Usage
 
 ```
-python3 record.py [OPTIONS] INDEX
+python3 pc_rec.py [OPTIONS] INDEX
 ```
 
 * **INDEX**   
