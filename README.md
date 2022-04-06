@@ -33,8 +33,16 @@ pip install numpy
 
 ## Usage
 
+### For PC
+
 ```
 python3 pc_rec.py [OPTIONS] INDEX
+```
+
+### For RPi
+
+```
+python3 rpi_rec.py [OPTIONS] INDEX
 ```
 
 * **INDEX**   
