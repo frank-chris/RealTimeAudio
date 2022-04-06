@@ -30,12 +30,13 @@ from optparse import OptionParser
 from scipy.io.wavfile import write
 from datetime import datetime
 from low_pass import butter_lowpass_filter
+from peaks import avg_rr
 
 CHUNKSIZE = 128
 CHANNELS = 1
 CUTOFF = 0.5
 ORDER = 5
-FFT_RESOLUTION = 1/8
+FFT_RESOLUTION = 1/16
 
 def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = False):
     """
@@ -124,6 +125,9 @@ def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = Fal
     write(os.path.join(dir_name, "filtered_audio.wav"), rate, filtered_audio)
     rr = pd.DataFrame({"rr": [60*peak for peak in peaks]})
     rr.to_csv(os.path.join(dir_name, "rr.csv"), index=False)
+    avg_rr_gt = avg_rr(rate, duration, filtered_audio)
+    with open(os.path.join(dir_name, "gt.txt"), 'w') as f:
+        f.write(str(avg_rr_gt))
 
 
 if __name__ == "__main__":
