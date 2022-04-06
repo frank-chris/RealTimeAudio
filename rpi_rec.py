@@ -29,6 +29,9 @@ from matplotlib import pyplot as plt
 from optparse import OptionParser
 from scipy.io.wavfile import write
 from datetime import datetime
+from st7789v.interface import RaspberryPi
+from st7789v import BufferedDisplay
+from PIL import ImageFont
 from low_pass import butter_lowpass_filter
 from peaks import avg_rr
 
@@ -81,51 +84,58 @@ def record(device_index:int, rate:int = 1000, duration:int = 20, plot:bool = Fal
 
     p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paInt16, input_device_index=device_index,channels=CHANNELS, rate=rate, input=True, frames_per_buffer=CHUNKSIZE)
+    font = ImageFont.truetype('fonts/Inter-Medium.ttf', 18)
 
-    frames = []
-    peaks = []
-    for _ in range(int(rate / CHUNKSIZE * duration)):
-        data = stream.read(CHUNKSIZE, exception_on_overflow = False)
-        frames.append(np.frombuffer(data, dtype=np.int16))
-        y = np.hstack(frames)
-        x = np.linspace(0, len(y), len(y), endpoint=False)
-        y_low_pass = butter_lowpass_filter(data=y, cutoff=CUTOFF, fs=rate, order=ORDER)
-        amplitude_frame = y_low_pass[-int(rate/ FFT_RESOLUTION):]
-        fft_out = np.fft.fft(amplitude_frame)
-        major_peak = round(abs(np.fft.fftfreq(int(rate/ FFT_RESOLUTION), d=1/rate)[np.argmax(abs(fft_out))]), 4)
-        peaks.append(major_peak)
-        
-        if plot:
-            text.set_text("Major peak: " + str(major_peak) + " Hz, " + str(60*major_peak) + " b.p.m")
-            line_1.set_data(x, y)
-            line_2.set_data(x, y_low_pass)
-            fig.canvas.restore_region(background1)
-            fig.canvas.restore_region(background2)
-            ax1.draw_artist(line_1)
-            ax2.draw_artist(line_2)
-            ax2.draw_artist(text)
-            fig.canvas.blit(ax1.bbox)
-            fig.canvas.blit(ax2.bbox)
-            fig.canvas.flush_events()
+    with RaspberryPi() as rpi:
+        display = BufferedDisplay(rpi, rotation=270)
+        frames = []
+        peaks = []
+        for _ in range(int(rate / CHUNKSIZE * duration)):
+            data = stream.read(CHUNKSIZE, exception_on_overflow = False)
+            frames.append(np.frombuffer(data, dtype=np.int16))
+            y = np.hstack(frames)
+            x = np.linspace(0, len(y), len(y), endpoint=False)
+            y_low_pass = butter_lowpass_filter(data=y, cutoff=CUTOFF, fs=rate, order=ORDER)
+            amplitude_frame = y_low_pass[-int(rate/ FFT_RESOLUTION):]
+            fft_out = np.fft.fft(amplitude_frame)
+            major_peak = round(abs(np.fft.fftfreq(int(rate/ FFT_RESOLUTION), d=1/rate)[np.argmax(abs(fft_out))]), 4)
+            peaks.append(major_peak)
+            
+            if plot:
+                text.set_text("Major peak: " + str(major_peak) + " Hz, " + str(60*major_peak) + " b.p.m")
+                line_1.set_data(x, y)
+                line_2.set_data(x, y_low_pass)
+                fig.canvas.restore_region(background1)
+                fig.canvas.restore_region(background2)
+                ax1.draw_artist(line_1)
+                ax2.draw_artist(line_2)
+                ax2.draw_artist(text)
+                fig.canvas.blit(ax1.bbox)
+                fig.canvas.blit(ax2.bbox)
+                fig.canvas.flush_events()
+            
+            display.draw.rectangle((0, 0, 320, 240), fill='BLACK')
+            display.draw.text((10, 110), "Major peak:\n" + str(major_peak) + " Hz", font=font, fill=(255, 255, 255))
+            display.update()
 
-    recorded_audio = np.hstack(frames)
-    print("\n", len(recorded_audio), "samples recorded")
+        recorded_audio = np.hstack(frames)
+        print("\n", len(recorded_audio), "samples recorded")
 
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
 
-    # save files
-    dir_name = str(datetime.now()).replace(" ", "_")
-    os.mkdir(dir_name)
-    write(os.path.join(dir_name, "recorded_audio.wav"), rate, recorded_audio)
-    filtered_audio = butter_lowpass_filter(data=recorded_audio, cutoff=CUTOFF, fs=rate, order=ORDER)
-    write(os.path.join(dir_name, "filtered_audio.wav"), rate, filtered_audio)
-    rr = pd.DataFrame({"rr": [60*peak for peak in peaks]})
-    rr.to_csv(os.path.join(dir_name, "rr.csv"), index=False)
-    avg_rr_gt = avg_rr(rate, duration, filtered_audio)
-    with open(os.path.join(dir_name, "gt.txt"), 'w') as f:
-        f.write(str(avg_rr_gt))
+        # save files
+        dir_name = str(datetime.now()).replace(" ", "_")
+        os.mkdir(dir_name)
+        write(os.path.join(dir_name, "recorded_audio.wav"), rate, recorded_audio)
+        filtered_audio = butter_lowpass_filter(data=recorded_audio, cutoff=CUTOFF, fs=rate, order=ORDER)
+        write(os.path.join(dir_name, "filtered_audio.wav"), rate, filtered_audio)
+        rr = pd.DataFrame({"rr": [60*peak for peak in peaks]})
+        rr.to_csv(os.path.join(dir_name, "rr.csv"), index=False)
+        avg_rr_gt = avg_rr(rate, duration, filtered_audio)
+        with open(os.path.join(dir_name, "gt.txt"), 'w') as f:
+            f.write(str(avg_rr_gt))
 
 
 if __name__ == "__main__":
